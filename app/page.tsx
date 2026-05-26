@@ -105,8 +105,13 @@ export default function LandingPage() {
       </section>
 
       {/* 푸터 */}
-      <footer className="border-t border-gray-100 py-6 px-4 text-center text-xs text-gray-400">
-        본 서비스의 가산점 정보는 참고용이며 실제 채용공고를 반드시 확인하세요.
+      <footer className="border-t border-gray-100 py-8 px-4 text-center text-xs text-gray-400">
+        <p>본 서비스의 가산점 정보는 참고용이며 실제 채용공고를 반드시 확인하세요.</p>
+        <nav aria-label="법적 페이지" className="flex justify-center gap-4 mt-3">
+          <Link href="/terms" className="hover:text-gray-600 hover:underline">이용약관</Link>
+          <Link href="/privacy" className="hover:text-gray-600 hover:underline">개인정보 처리방침</Link>
+        </nav>
+        <p className="mt-2">© 2026 공기업 가산점 추천. All rights reserved.</p>
       </footer>
     </div>
   )
