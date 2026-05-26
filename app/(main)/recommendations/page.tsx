@@ -2,7 +2,8 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import type { RecommendationResult } from '@/types'
 
@@ -21,17 +22,63 @@ const CATEGORY_LABEL: Record<string, string> = {
   '보훈': '🏅', '장애': '♿', '지역인재': '📍', '기타': '➕',
 }
 
-export default function RecommendationsPage() {
+function RecommendationsInner() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
   const [results, setResults] = useState<RecommendationResult[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set())
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
-  // 필터·정렬 상태
-  const [typeFilter, setTypeFilter] = useState('전체')
-  const [sortBy, setSortBy] = useState('bonus_desc')
-  const [locationFilter, setLocationFilter] = useState('')
+  // URL 파라미터에서 초기값 읽기
+  const [typeFilter, setTypeFilter] = useState(() => searchParams.get('type') ?? '전체')
+  const [sortBy, setSortBy] = useState(() => searchParams.get('sort') ?? 'bonus_desc')
+  const [locationFilter, setLocationFilter] = useState(() => searchParams.get('loc') ?? '')
+
+  // 필터 변경 시 URL 동기화
+  const syncUrl = useCallback((type: string, sort: string, loc: string) => {
+    const params = new URLSearchParams()
+    if (type !== '전체') params.set('type', type)
+    if (sort !== 'bonus_desc') params.set('sort', sort)
+    if (loc) params.set('loc', loc)
+    const query = params.toString()
+    router.replace(`/recommendations${query ? `?${query}` : ''}`, { scroll: false })
+  }, [router])
+
+  function handleTypeFilter(value: string) {
+    setTypeFilter(value)
+    syncUrl(value, sortBy, locationFilter)
+  }
+  function handleSort(value: string) {
+    setSortBy(value)
+    syncUrl(typeFilter, value, locationFilter)
+  }
+  function handleLocation(value: string) {
+    setLocationFilter(value)
+    syncUrl(typeFilter, sortBy, value)
+  }
+
+  // 공유 링크 복사
+  async function copyShareLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // fallback: execCommand
+      const el = document.createElement('input')
+      el.value = window.location.href
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
 
   useEffect(() => {
     Promise.all([
@@ -61,7 +108,6 @@ export default function RecommendationsPage() {
       list = list.filter((r) => r.enterprise.location?.startsWith(locationFilter))
     }
     if (sortBy === 'match_desc') list.sort((a, b) => b.matched_rules.length - a.matched_rules.length)
-    // bonus_desc는 API 기본값 유지
     return list
   }, [results, typeFilter, locationFilter, sortBy])
 
@@ -119,9 +165,23 @@ export default function RecommendationsPage() {
             내 스펙과 가산점이 가장 잘 맞는 공기업 순입니다.
           </p>
         </div>
-        <Link href="/profile/setup" className="text-sm text-blue-600 hover:underline shrink-0">
-          프로필 수정
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* 공유 링크 복사 버튼 */}
+          <button
+            onClick={copyShareLink}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+              copied
+                ? 'border-green-400 bg-green-50 text-green-700'
+                : 'border-gray-300 text-gray-500 hover:bg-gray-50'
+            }`}
+            title="현재 필터 상태로 공유 링크 복사"
+          >
+            {copied ? '✓ 복사됨' : '🔗 공유'}
+          </button>
+          <Link href="/profile/setup" className="text-sm text-blue-600 hover:underline">
+            프로필 수정
+          </Link>
+        </div>
       </div>
 
       {/* 필터·정렬 바 */}
@@ -131,7 +191,7 @@ export default function RecommendationsPage() {
           {ENTERPRISE_TYPES.map((t) => (
             <button
               key={t}
-              onClick={() => setTypeFilter(t)}
+              onClick={() => handleTypeFilter(t)}
               className={`text-xs px-2.5 py-1 rounded-full transition-colors ${
                 typeFilter === t
                   ? 'bg-blue-600 text-white'
@@ -146,7 +206,7 @@ export default function RecommendationsPage() {
         {/* 지역 필터 */}
         <select
           value={locationFilter || '전체'}
-          onChange={(e) => setLocationFilter(e.target.value === '전체' ? '' : e.target.value)}
+          onChange={(e) => handleLocation(e.target.value === '전체' ? '' : e.target.value)}
           className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
         >
           {locations.map((l) => <option key={l} value={l}>{l}</option>)}
@@ -155,7 +215,7 @@ export default function RecommendationsPage() {
         {/* 정렬 */}
         <select
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
+          onChange={(e) => handleSort(e.target.value)}
           className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
         >
           {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -167,7 +227,10 @@ export default function RecommendationsPage() {
       {filtered.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
           <p className="text-gray-500 text-sm">필터 조건에 맞는 공기업이 없습니다.</p>
-          <button onClick={() => { setTypeFilter('전체'); setLocationFilter('') }} className="mt-3 text-sm text-blue-600 hover:underline">
+          <button
+            onClick={() => { handleTypeFilter('전체'); handleLocation('') }}
+            className="mt-3 text-sm text-blue-600 hover:underline"
+          >
             필터 초기화
           </button>
         </div>
@@ -232,5 +295,19 @@ export default function RecommendationsPage() {
         정보 오류로 인한 불이익에 대해 서비스는 책임지지 않습니다.
       </p>
     </div>
+  )
+}
+
+export default function RecommendationsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <RecommendationsInner />
+    </Suspense>
   )
 }
