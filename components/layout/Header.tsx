@@ -16,7 +16,7 @@ export default async function Header() {
         </Link>
 
         {user ? (
-          <nav className="flex items-center gap-1">
+          <nav aria-label="사이트 메인 메뉴" className="flex items-center gap-1">
             <Link
               href="/recommendations"
               className="text-sm text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-50"

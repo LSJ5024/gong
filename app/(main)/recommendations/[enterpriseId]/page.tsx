@@ -97,29 +97,34 @@ export default async function EnterpriseDetailPage({
 
       {/* 가산점 기준 */}
       {Object.entries(grouped).map(([category, categoryRules]) => (
-        <div key={category} className="bg-white rounded-2xl shadow-sm p-5 mb-3">
-          <h2 className="text-sm font-bold text-gray-700 mb-3">
+        <section key={category} className="bg-white rounded-2xl shadow-sm p-5 mb-3" aria-labelledby={`cat-${category}`}>
+          <h2 id={`cat-${category}`} className="text-sm font-bold text-gray-700 mb-3">
             {CATEGORY_LABEL[category] ?? category}
           </h2>
-          <div className="space-y-2">
+          <ul className="space-y-2" role="list">
             {categoryRules?.map((rule) => (
-              <div key={rule.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+              <li key={rule.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
                 <div>
                   <p className="text-sm text-gray-800">{rule.condition_detail}</p>
                   {rule.source_url && (
-                    <a href={rule.source_url} target="_blank" rel="noopener noreferrer"
-                      className="text-xs text-blue-500 hover:underline">
+                    <a
+                      href={rule.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-500 hover:underline"
+                      aria-label={`${rule.condition_detail} 출처 보기 (새 창)`}
+                    >
                       출처 보기
                     </a>
                   )}
                 </div>
-                <span className="text-blue-600 font-bold text-sm whitespace-nowrap ml-4">
+                <span className="text-blue-600 font-bold text-sm whitespace-nowrap ml-4" aria-label={`가산점 ${rule.bonus_point_percentage}퍼센트`}>
                   +{rule.bonus_point_percentage}%
                 </span>
-              </div>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </section>
       ))}
 
       {(!rules || rules.length === 0) && (

@@ -12,7 +12,16 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko" className={`${geist.variable}`}>
-      <body className="min-h-screen bg-gray-50 antialiased">{children}</body>
+      <body className="min-h-screen bg-gray-50 antialiased">
+        {/* 스크린리더용 본문 바로가기 */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:text-sm font-medium"
+        >
+          본문 바로가기
+        </a>
+        {children}
+      </body>
     </html>
   )
 }

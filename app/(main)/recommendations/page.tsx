@@ -131,9 +131,9 @@ function RecommendationsInner() {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center" role="status" aria-live="polite" aria-label="로딩 중">
         <div className="text-center">
-          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" aria-hidden="true" />
           <p className="text-sm text-gray-500">가산점 분석 중...</p>
         </div>
       </div>
@@ -220,7 +220,9 @@ function RecommendationsInner() {
         >
           {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        <span className="text-xs text-gray-400 ml-auto">{filtered.length}개</span>
+        <span className="text-xs text-gray-400 ml-auto" aria-live="polite" aria-atomic="true">
+          {filtered.length}개
+        </span>
       </div>
 
       {/* 추천 목록 */}
@@ -256,13 +258,13 @@ function RecommendationsInner() {
                       </div>
                       <p className="text-xs text-gray-400 mt-0.5">{item.enterprise.location}</p>
                       <div className="flex flex-wrap gap-1.5 mt-2">
-                        {item.matched_rules.slice(0, 4).map((rule, i) => (
-                          <span key={i} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                        {item.matched_rules.slice(0, 3).map((rule, i) => (
+                          <span key={i} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full max-w-[140px] truncate">
                             {CATEGORY_LABEL[rule.category]} {rule.condition_detail}
                           </span>
                         ))}
-                        {item.matched_rules.length > 4 && (
-                          <span className="text-xs text-gray-400">+{item.matched_rules.length - 4}개</span>
+                        {item.matched_rules.length > 3 && (
+                          <span className="text-xs text-gray-400">+{item.matched_rules.length - 3}개</span>
                         )}
                       </div>
                     </div>
@@ -275,8 +277,8 @@ function RecommendationsInner() {
                     <button
                       onClick={(e) => toggleBookmark(e, item.enterprise.id)}
                       disabled={togglingId === item.enterprise.id}
-                      className={`text-lg transition-transform hover:scale-110 ${isBookmarked ? 'text-yellow-400' : 'text-gray-300'}`}
-                      title={isBookmarked ? '북마크 삭제' : '북마크 추가'}
+                      aria-label={isBookmarked ? '북마크 삭제' : '북마크 추가'}
+                      className={`text-xl w-10 h-10 flex items-center justify-center rounded-lg transition-all hover:scale-110 active:scale-95 ${isBookmarked ? 'text-yellow-400' : 'text-gray-300'}`}
                     >
                       ★
                     </button>

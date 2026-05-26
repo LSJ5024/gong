@@ -14,22 +14,22 @@ const FEATURES = [
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white" id="main-content">
       {/* 헤더 */}
       <header className="border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <span className="font-bold text-blue-600 text-lg">공기업 가산점 추천</span>
-          <div className="flex gap-3">
-            <Link href="/login" className="text-sm text-gray-600 hover:text-gray-900 px-3 py-1.5">
+          <nav aria-label="사이트 메인 메뉴" className="flex gap-3">
+            <Link href="/login" className="text-sm text-gray-600 hover:text-gray-900 px-3 py-2 min-h-[44px] flex items-center">
               로그인
             </Link>
             <Link
               href="/signup"
-              className="text-sm bg-blue-600 text-white px-4 py-1.5 rounded-lg hover:bg-blue-700"
+              className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 min-h-[44px] flex items-center"
             >
               무료 시작
             </Link>
-          </div>
+          </nav>
         </div>
       </header>
 

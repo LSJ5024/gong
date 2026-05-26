@@ -12,6 +12,7 @@ import type {
 } from '@/types'
 
 const STEPS = ['학력·전공', '자격증', '어학성적', '기타 가산항목']
+const STEP_SHORT = ['학력', '자격증', '어학', '기타']
 
 const EDUCATION_LEVELS: EducationLevel[] = ['고졸', '전문학사', '학사', '석사', '박사']
 const MAJOR_CATEGORIES: MajorCategory[] = ['이공계', '상경계', '인문사회계', '사범계', '예체능', '기타']
@@ -31,6 +32,9 @@ const OPIC_GRADES = ['NL', 'NM', 'NH', 'IL', 'IM1', 'IM2', 'IM3', 'IH', 'AL']
 const TOEIC_SPEAKING_GRADES = ['Lv.1', 'Lv.2', 'Lv.3', 'Lv.4', 'Lv.5', 'Lv.6', 'Lv.7', 'Lv.8']
 const JLPT_GRADES = ['N5', 'N4', 'N3', 'N2', 'N1']
 const HSK_GRADES = ['1급', '2급', '3급', '4급', '5급', '6급']
+
+// 공통 input/select 스타일 (iOS 16px 이상으로 자동 확대 방지)
+const INPUT_CLS = 'w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base sm:text-sm leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500'
 
 export default function ProfileSetupPage() {
   const router = useRouter()
@@ -58,9 +62,7 @@ export default function ProfileSetupPage() {
   }
 
   function removeCertificate(i: number) {
-    setStep2((prev) => ({
-      certificates: prev.certificates.filter((_, idx) => idx !== i),
-    }))
+    setStep2((prev) => ({ certificates: prev.certificates.filter((_, idx) => idx !== i) }))
   }
 
   function addLanguageScore() {
@@ -73,9 +75,7 @@ export default function ProfileSetupPage() {
   }
 
   function removeLanguageScore(i: number) {
-    setStep3((prev) => ({
-      language_scores: prev.language_scores.filter((_, idx) => idx !== i),
-    }))
+    setStep3((prev) => ({ language_scores: prev.language_scores.filter((_, idx) => idx !== i) }))
   }
 
   async function handleSubmit() {
@@ -86,7 +86,6 @@ export default function ProfileSetupPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
 
-    // 1. 프로필 생성
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .insert({
@@ -113,7 +112,6 @@ export default function ProfileSetupPage() {
       return
     }
 
-    // 2. 어학성적 저장
     const validScores = step3.language_scores.filter((s) => s.acquired_date)
     if (validScores.length > 0) {
       const { error: langError } = await supabase.from('user_language_scores').insert(
@@ -138,22 +136,27 @@ export default function ProfileSetupPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 py-10">
+      <div className="max-w-2xl mx-auto px-4 py-8">
+
         {/* 스텝 인디케이터 */}
         <div className="flex items-center mb-8">
           {STEPS.map((label, i) => (
-            <div key={i} className="flex items-center flex-1">
-              <div className="flex flex-col items-center">
+            <div key={i} className="flex items-center flex-1 min-w-0">
+              <div className="flex flex-col items-center min-w-0">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0
                     ${i < step ? 'bg-blue-600 text-white' :
                       i === step ? 'bg-blue-600 text-white ring-4 ring-blue-100' :
                       'bg-gray-200 text-gray-400'}`}
                 >
                   {i < step ? '✓' : i + 1}
                 </div>
-                <span className={`text-xs mt-1 ${i === step ? 'text-blue-600 font-medium' : 'text-gray-400'}`}>
-                  {label}
+                {/* 모바일: 짧은 레이블 / 데스크탑: 전체 레이블 */}
+                <span className={`text-xs mt-1 truncate max-w-[48px] sm:max-w-none text-center leading-tight ${
+                  i === step ? 'text-blue-600 font-medium' : 'text-gray-400'
+                }`}>
+                  <span className="sm:hidden">{STEP_SHORT[i]}</span>
+                  <span className="hidden sm:inline">{label}</span>
                 </span>
               </div>
               {i < STEPS.length - 1 && (
@@ -163,18 +166,19 @@ export default function ProfileSetupPage() {
           ))}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-6">
+        <div className="bg-white rounded-2xl shadow-sm p-5 sm:p-6">
+
           {/* Step 1: 학력·전공 */}
           {step === 0 && (
             <div className="space-y-4">
               <h2 className="text-lg font-bold text-gray-900">학력 및 전공 입력</h2>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">최종 학력</label>
                   <select
                     value={step1.education_level}
                     onChange={(e) => setStep1((p) => ({ ...p, education_level: e.target.value as EducationLevel }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={INPUT_CLS}
                   >
                     <option value="">선택</option>
                     {EDUCATION_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
@@ -185,7 +189,7 @@ export default function ProfileSetupPage() {
                   <select
                     value={step1.major_category}
                     onChange={(e) => setStep1((p) => ({ ...p, major_category: e.target.value as MajorCategory }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={INPUT_CLS}
                   >
                     <option value="">선택</option>
                     {MAJOR_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -198,19 +202,21 @@ export default function ProfileSetupPage() {
                   type="text"
                   value={step1.major_detail}
                   onChange={(e) => setStep1((p) => ({ ...p, major_detail: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={INPUT_CLS}
                   placeholder="전공명 입력"
+                  autoComplete="off"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">학교명</label>
                   <input
                     type="text"
                     value={step1.school_name}
                     onChange={(e) => setStep1((p) => ({ ...p, school_name: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={INPUT_CLS}
                     placeholder="학교명"
+                    autoComplete="organization"
                   />
                 </div>
                 <div>
@@ -219,21 +225,23 @@ export default function ProfileSetupPage() {
                     type="text"
                     value={step1.school_region}
                     onChange={(e) => setStep1((p) => ({ ...p, school_region: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={INPUT_CLS}
                     placeholder="예: 서울, 부산"
+                    autoComplete="address-level1"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">학점 (선택)</label>
                   <input
                     type="number"
                     value={step1.gpa}
                     onChange={(e) => setStep1((p) => ({ ...p, gpa: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={INPUT_CLS}
                     placeholder="4.5 기준"
                     step="0.01" min="0" max="4.5"
+                    inputMode="decimal"
                   />
                 </div>
                 <div>
@@ -242,7 +250,7 @@ export default function ProfileSetupPage() {
                     type="text"
                     value={step1.double_major}
                     onChange={(e) => setStep1((p) => ({ ...p, double_major: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={INPUT_CLS}
                     placeholder="예: 통계학"
                   />
                 </div>
@@ -266,12 +274,12 @@ export default function ProfileSetupPage() {
                     <button
                       type="button"
                       onClick={() => removeCertificate(i)}
-                      className="text-red-400 text-xs hover:text-red-600"
+                      className="text-red-400 text-sm hover:text-red-600 min-h-[44px] px-2"
                     >
                       삭제
                     </button>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">자격증명</label>
                       <input
@@ -282,12 +290,13 @@ export default function ProfileSetupPage() {
                           next[i] = { ...next[i], certificate_name: e.target.value }
                           setStep2({ certificates: next })
                         }}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={INPUT_CLS}
                         placeholder="예: 정보처리기사"
+                        autoComplete="off"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">등급</label>
+                      <label className="block text-xs text-gray-500 mb-1">등급 (선택)</label>
                       <input
                         type="text"
                         value={cert.grade}
@@ -296,7 +305,7 @@ export default function ProfileSetupPage() {
                           next[i] = { ...next[i], grade: e.target.value }
                           setStep2({ certificates: next })
                         }}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={INPUT_CLS}
                         placeholder="예: 기사"
                       />
                     </div>
@@ -311,7 +320,7 @@ export default function ProfileSetupPage() {
                         next[i] = { ...next[i], acquired_date: e.target.value }
                         setStep2({ certificates: next })
                       }}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className={INPUT_CLS}
                     />
                   </div>
                 </div>
@@ -319,7 +328,7 @@ export default function ProfileSetupPage() {
               <button
                 type="button"
                 onClick={addCertificate}
-                className="w-full border-2 border-dashed border-gray-300 rounded-lg py-3 text-sm text-gray-500 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                className="w-full border-2 border-dashed border-gray-300 rounded-lg py-3.5 text-sm text-gray-500 hover:border-blue-400 hover:text-blue-500 transition-colors min-h-[44px]"
               >
                 + 자격증 추가
               </button>
@@ -350,12 +359,12 @@ export default function ProfileSetupPage() {
                       <button
                         type="button"
                         onClick={() => removeLanguageScore(i)}
-                        className="text-red-400 text-xs hover:text-red-600"
+                        className="text-red-400 text-sm hover:text-red-600 min-h-[44px] px-2"
                       >
                         삭제
                       </button>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">시험 종류</label>
                         <select
@@ -365,7 +374,7 @@ export default function ProfileSetupPage() {
                             next[i] = { ...next[i], exam_type: e.target.value as ExamType, score: '', grade: '' }
                             setStep3({ language_scores: next })
                           }}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className={INPUT_CLS}
                         >
                           {EXAM_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                         </select>
@@ -382,7 +391,7 @@ export default function ProfileSetupPage() {
                               next[i] = { ...next[i], grade: e.target.value }
                               setStep3({ language_scores: next })
                             }}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={INPUT_CLS}
                           >
                             <option value="">선택</option>
                             {gradeOptions.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -396,8 +405,9 @@ export default function ProfileSetupPage() {
                               next[i] = { ...next[i], score: e.target.value }
                               setStep3({ language_scores: next })
                             }}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={INPUT_CLS}
                             placeholder="점수 입력"
+                            inputMode="numeric"
                           />
                         )}
                       </div>
@@ -412,7 +422,7 @@ export default function ProfileSetupPage() {
                           next[i] = { ...next[i], acquired_date: e.target.value }
                           setStep3({ language_scores: next })
                         }}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={INPUT_CLS}
                       />
                     </div>
                   </div>
@@ -421,7 +431,7 @@ export default function ProfileSetupPage() {
               <button
                 type="button"
                 onClick={addLanguageScore}
-                className="w-full border-2 border-dashed border-gray-300 rounded-lg py-3 text-sm text-gray-500 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                className="w-full border-2 border-dashed border-gray-300 rounded-lg py-3.5 text-sm text-gray-500 hover:border-blue-400 hover:text-blue-500 transition-colors min-h-[44px]"
               >
                 + 어학성적 추가
               </button>
@@ -434,21 +444,24 @@ export default function ProfileSetupPage() {
               <h2 className="text-lg font-bold text-gray-900">기타 가산 항목</h2>
               <p className="text-sm text-gray-500">해당하는 항목을 선택하세요. 민감 정보는 암호화되어 저장됩니다.</p>
               {[
-                { key: 'is_veterans', label: '취업 지원 대상자 (보훈)', desc: '국가유공자 등 취업지원대상자' },
-                { key: 'is_disabled', label: '장애인 등록', desc: '장애인 복지법상 등록 장애인' },
-                { key: 'is_local_talent', label: '지역인재', desc: '지방대학 및 지역균형인재 육성에 관한 법률 해당자' },
-                { key: 'is_non_capital', label: '비수도권 거주', desc: '서울·경기·인천 외 지역 거주' },
+                { key: 'is_veterans',     label: '취업 지원 대상자 (보훈)', desc: '국가유공자 등 취업지원대상자' },
+                { key: 'is_disabled',     label: '장애인 등록',             desc: '장애인 복지법상 등록 장애인' },
+                { key: 'is_local_talent', label: '지역인재',                desc: '지방대학 및 지역균형인재 육성에 관한 법률 해당자' },
+                { key: 'is_non_capital',  label: '비수도권 거주',            desc: '서울·경기·인천 외 지역 거주' },
               ].map(({ key, label, desc }) => (
-                <label key={key} className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
+                <label
+                  key={key}
+                  className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors min-h-[60px]"
+                >
                   <input
                     type="checkbox"
                     checked={step4[key as keyof ProfileStep4]}
                     onChange={(e) => setStep4((p) => ({ ...p, [key]: e.target.checked }))}
-                    className="mt-0.5 w-4 h-4 text-blue-600 rounded"
+                    className="mt-0.5 w-5 h-5 text-blue-600 rounded"
                   />
                   <div>
                     <p className="text-sm font-medium text-gray-900">{label}</p>
-                    <p className="text-xs text-gray-500">{desc}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
                   </div>
                 </label>
               ))}
@@ -463,7 +476,7 @@ export default function ProfileSetupPage() {
               <button
                 type="button"
                 onClick={() => setStep((s) => s - 1)}
-                className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors"
+                className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-3 text-sm font-medium hover:bg-gray-50 transition-colors min-h-[44px]"
               >
                 이전
               </button>
@@ -472,7 +485,7 @@ export default function ProfileSetupPage() {
               <button
                 type="button"
                 onClick={() => setStep((s) => s + 1)}
-                className="flex-1 bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors"
+                className="flex-1 bg-blue-600 text-white rounded-lg py-3 text-sm font-medium hover:bg-blue-700 transition-colors min-h-[44px]"
               >
                 다음
               </button>
@@ -481,7 +494,7 @@ export default function ProfileSetupPage() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={saving}
-                className="flex-1 bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="flex-1 bg-blue-600 text-white rounded-lg py-3 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors min-h-[44px]"
               >
                 {saving ? '저장 중...' : '완료 — 추천 결과 보기'}
               </button>
@@ -495,7 +508,7 @@ export default function ProfileSetupPage() {
             <button
               type="button"
               onClick={() => setStep((s) => s + 1)}
-              className="hover:text-gray-600 underline"
+              className="hover:text-gray-600 underline min-h-[44px] px-3"
             >
               이 단계 건너뛰기
             </button>

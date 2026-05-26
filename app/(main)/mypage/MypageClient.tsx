@@ -182,8 +182,8 @@ export default function MypageClient({
         </Link>
       </div>
 
-      {/* 탭 */}
-      <div className="flex border-b border-gray-200 mb-6">
+      {/* 탭 — 모바일에서 가로 스크롤 */}
+      <div className="flex border-b border-gray-200 mb-6 overflow-x-auto scrollbar-none -mx-4 px-4">
         {([
           { id: 'profile',       label: `내 프로필 (${profiles.length})` },
           { id: 'bookmarks',     label: `관심 기업 (${bookmarks.length})` },
@@ -192,7 +192,7 @@ export default function MypageClient({
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors shrink-0 min-h-[44px] ${
               tab === id
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -227,16 +227,16 @@ export default function MypageClient({
                       type="text"
                       value={editForm.profile_name ?? ''}
                       onChange={(e) => setEditForm((p) => ({ ...p, profile_name: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">최종 학력</label>
                       <select
                         value={editForm.education_level ?? ''}
                         onChange={(e) => setEditForm((p) => ({ ...p, education_level: e.target.value || null }))}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">선택</option>
                         {EDUCATION_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
@@ -247,21 +247,21 @@ export default function MypageClient({
                       <select
                         value={editForm.major_category ?? ''}
                         onChange={(e) => setEditForm((p) => ({ ...p, major_category: e.target.value || null }))}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">선택</option>
                         {MAJOR_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">전공 세부</label>
                       <input
                         type="text"
                         value={editForm.major_detail ?? ''}
                         onChange={(e) => setEditForm((p) => ({ ...p, major_detail: e.target.value || null }))}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="예: 전기전자"
                       />
                     </div>
@@ -271,7 +271,7 @@ export default function MypageClient({
                         type="text"
                         value={editForm.school_region ?? ''}
                         onChange={(e) => setEditForm((p) => ({ ...p, school_region: e.target.value || null }))}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="예: 서울, 부산"
                       />
                     </div>
