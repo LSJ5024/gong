@@ -134,9 +134,19 @@ export default async function EnterpriseDetailPage({
           <h2 className="text-sm font-bold text-blue-800 mb-3">📈 갭 분석 — 한 단계 올리면?</h2>
           <div className="space-y-2">
             {gapItems.map((g, i) => (
-              <div key={i} className="flex items-center justify-between py-2 border-b border-blue-50 last:border-0">
-                <p className="text-sm text-gray-800">{g.suggestion}</p>
-                <span className="text-green-600 font-bold text-sm whitespace-nowrap ml-4">
+              <div key={i} className="flex items-start justify-between py-2 border-b border-blue-50 last:border-0">
+                <div>
+                  <span className="text-xs font-medium px-1.5 py-0.5 rounded mr-1.5 bg-blue-100 text-blue-700">
+                    {g.type === 'certificate' ? '자격증' : '어학'}
+                  </span>
+                  <span className="text-sm text-gray-800">{g.suggestion}</span>
+                  {g.current_bonus > 0 && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      현재 +{g.current_bonus}% → 달성 후 +{g.next_bonus}%
+                    </p>
+                  )}
+                </div>
+                <span className="text-green-600 font-bold text-sm whitespace-nowrap ml-4 shrink-0">
                   +{g.gain}%↑
                 </span>
               </div>
