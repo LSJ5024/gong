@@ -15,18 +15,28 @@ export default function BookmarkButton({
   async function toggle() {
     if (loading) return
     setLoading(true)
-    if (bookmarked) {
-      await fetch(`/api/bookmarks?enterpriseId=${enterpriseId}`, { method: 'DELETE' })
-      setBookmarked(false)
-    } else {
-      await fetch('/api/bookmarks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enterprise_id: enterpriseId }),
-      })
-      setBookmarked(true)
+    const wasBookmarked = bookmarked
+    // 낙관적 업데이트
+    setBookmarked(!wasBookmarked)
+
+    try {
+      const res = wasBookmarked
+        ? await fetch(`/api/bookmarks?enterpriseId=${enterpriseId}`, { method: 'DELETE' })
+        : await fetch('/api/bookmarks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enterprise_id: enterpriseId }),
+          })
+
+      if (!res.ok) {
+        // 실패 시 되돌리기
+        setBookmarked(wasBookmarked)
+      }
+    } catch {
+      setBookmarked(wasBookmarked)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (

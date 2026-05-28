@@ -28,15 +28,24 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const protectedPaths = ['/profile', '/recommendations', '/mypage']
-  const isProtected = protectedPaths.some((p) =>
-    request.nextUrl.pathname.startsWith(p)
-  )
+  const pathname = request.nextUrl.pathname
 
+  // 로그인 필요 경로 → 비로그인 시 /login 리디렉트
+  const protectedPaths = ['/profile', '/recommendations', '/mypage', '/compare']
+  const isProtected = protectedPaths.some((p) => pathname.startsWith(p))
   if (isProtected && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
+  }
+
+  // 어드민 경로 → 비로그인 시 /login 리디렉트 (이메일 체크는 레이아웃에서)
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+    if (!user) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse

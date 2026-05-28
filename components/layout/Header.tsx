@@ -16,21 +16,7 @@ export default async function Header() {
         </Link>
 
         {user ? (
-          <nav aria-label="사이트 메인 메뉴" className="flex items-center gap-1">
-            <Link
-              href="/recommendations"
-              className="text-sm text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-50"
-            >
-              추천 결과
-            </Link>
-            <Link
-              href="/mypage"
-              className="text-sm text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-50"
-            >
-              마이페이지
-            </Link>
-            <HeaderClient />
-          </nav>
+          <HeaderClient />
         ) : (
           <div className="flex items-center gap-2">
             <Link href="/login" className="text-sm text-gray-600 hover:text-gray-900 px-3 py-1.5">

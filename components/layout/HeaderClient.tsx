@@ -42,7 +42,7 @@ export default function HeaderClient() {
   return (
     <>
       {/* 데스크탑 nav (sm 이상) */}
-      <nav className="hidden sm:flex items-center gap-1">
+      <nav aria-label="사이트 메인 메뉴" className="hidden sm:flex items-center gap-1">
         {navLinks.map(({ href, label }) => (
           <Link
             key={href}

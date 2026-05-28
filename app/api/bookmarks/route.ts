@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 const bookmarkSchema = z.object({
-  enterprise_id: z.string().uuid(),
+  enterprise_id: z.string().min(1),
 })
 
 // GET /api/bookmarks — 북마크 목록 (기업 정보 포함)

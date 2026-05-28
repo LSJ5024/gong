@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { EducationLevel, MajorCategory } from '@/types'
-
 // 알림 설정 타입
 type NotificationSettings = {
   new_job_posting: boolean       // 관심 기업 신규 채용 공고
@@ -90,8 +89,14 @@ export default function MypageClient({
   const [editForm, setEditForm] = useState<Partial<ProfileRow>>({})
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [compareIds, setCompareIds] = useState<Set<string>>(new Set())
   const [notifSettings, setNotifSettings] = useState<NotificationSettings>(loadNotificationSettings)
   const [notifSaved, setNotifSaved] = useState(false)
+  const [showWithdraw, setShowWithdraw] = useState(false)
+  const [withdrawing, setWithdrawing] = useState(false)
+  const [withdrawConfirmText, setWithdrawConfirmText] = useState('')
 
   // 알림 설정 변경 시 localStorage 저장
   useEffect(() => {
@@ -156,10 +161,37 @@ export default function MypageClient({
     setSaving(false)
   }
 
+  async function deleteProfile(profileId: string) {
+    setDeletingId(profileId)
+    const res = await fetch(`/api/profiles?profileId=${profileId}`, { method: 'DELETE' })
+    if (res.ok) {
+      setProfiles((prev) => prev.filter((p) => p.id !== profileId))
+      router.refresh()
+    }
+    setDeletingId(null)
+    setConfirmDeleteId(null)
+  }
+
   async function removeBookmark(enterpriseId: string) {
     const res = await fetch(`/api/bookmarks?enterpriseId=${enterpriseId}`, { method: 'DELETE' })
     if (res.ok) {
       setBookmarks((prev) => prev.filter((b) => b.enterprise_id !== enterpriseId))
+    }
+  }
+
+  async function withdrawAccount() {
+    if (withdrawConfirmText !== '탈퇴합니다') return
+    setWithdrawing(true)
+    try {
+      const res = await fetch('/api/account', { method: 'DELETE' })
+      if (res.ok) {
+        router.push('/?withdrawn=1')
+      } else {
+        const json = await res.json()
+        alert(json.error ?? '탈퇴 처리 중 오류가 발생했습니다.')
+      }
+    } finally {
+      setWithdrawing(false)
     }
   }
 
@@ -206,6 +238,27 @@ export default function MypageClient({
       {/* 프로필 탭 */}
       {tab === 'profile' && (
         <div className="space-y-4">
+          {/* 비교 선택 안내 / 실행 버튼 */}
+          {profiles.length >= 2 && (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+              <p className="text-sm text-blue-700">
+                {compareIds.size === 0
+                  ? '비교할 프로필을 2개 선택하세요.'
+                  : compareIds.size === 1
+                  ? '프로필을 1개 더 선택하세요.'
+                  : `${compareIds.size}개 선택됨`}
+              </p>
+              {compareIds.size >= 2 && (
+                <Link
+                  href={`/compare?${[...compareIds].map((id) => `p=${id}`).join('&')}`}
+                  className="text-sm bg-blue-600 text-white px-4 py-1.5 rounded-lg hover:bg-blue-700 shrink-0"
+                >
+                  비교하기 →
+                </Link>
+              )}
+            </div>
+          )}
+
           {profiles.length === 0 && (
             <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
               <p className="text-gray-500 text-sm mb-4">등록된 프로필이 없습니다.</p>
@@ -218,7 +271,12 @@ export default function MypageClient({
             </div>
           )}
           {profiles.map((profile) => (
-            <div key={profile.id} className="bg-white rounded-2xl shadow-sm p-5">
+            <div
+              key={profile.id}
+              className={`bg-white rounded-2xl shadow-sm p-5 transition-shadow ${
+                compareIds.has(profile.id) ? 'ring-2 ring-blue-400' : ''
+              }`}
+            >
               {editingId === profile.id ? (
                 <div className="space-y-4">
                   <div>
@@ -313,6 +371,28 @@ export default function MypageClient({
                 </div>
               ) : (
                 <div>
+                  {/* 비교 체크박스 (프로필 2개 이상일 때) */}
+                  {profiles.length >= 2 && (
+                    <label className="flex items-center gap-2 mb-3 cursor-pointer w-fit">
+                      <input
+                        type="checkbox"
+                        checked={compareIds.has(profile.id)}
+                        onChange={(e) => {
+                          setCompareIds((prev) => {
+                            const s = new Set(prev)
+                            if (e.target.checked) {
+                              if (s.size < 3) s.add(profile.id)
+                            } else {
+                              s.delete(profile.id)
+                            }
+                            return s
+                          })
+                        }}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="text-xs text-gray-500">비교 선택</span>
+                    </label>
+                  )}
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="font-bold text-gray-900">{profile.profile_name}</h3>
@@ -341,12 +421,39 @@ export default function MypageClient({
                         수정일: {new Date(profile.updated_at).toLocaleDateString('ko-KR')}
                       </p>
                     </div>
-                    <button
-                      onClick={() => startEdit(profile)}
-                      className="text-sm text-blue-600 hover:underline shrink-0 ml-4"
-                    >
-                      수정
-                    </button>
+                    <div className="flex flex-col items-end gap-2 shrink-0 ml-4">
+                      <button
+                        onClick={() => startEdit(profile)}
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        수정
+                      </button>
+                      {confirmDeleteId === profile.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-gray-500">삭제할까요?</span>
+                          <button
+                            onClick={() => deleteProfile(profile.id)}
+                            disabled={deletingId === profile.id}
+                            className="text-xs text-white bg-red-500 hover:bg-red-600 px-2 py-1 rounded disabled:opacity-50"
+                          >
+                            {deletingId === profile.id ? '삭제 중...' : '확인'}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded border border-gray-200"
+                          >
+                            취소
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteId(profile.id)}
+                          className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          삭제
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -473,6 +580,50 @@ export default function MypageClient({
           })}
         </div>
       )}
+
+      {/* 회원 탈퇴 섹션 */}
+      <div className="mt-12 pt-6 border-t border-gray-100">
+        {!showWithdraw ? (
+          <button
+            onClick={() => setShowWithdraw(true)}
+            className="text-sm text-gray-400 hover:text-red-500 transition-colors"
+          >
+            회원 탈퇴
+          </button>
+        ) : (
+          <div className="bg-red-50 border border-red-100 rounded-2xl p-5">
+            <h3 className="font-bold text-red-900 mb-1">정말 탈퇴하시겠습니까?</h3>
+            <p className="text-sm text-red-700 mb-4 leading-relaxed">
+              모든 프로필, 북마크, 데이터가 <strong>즉시 삭제</strong>되며 복구할 수 없습니다.
+            </p>
+            <p className="text-sm text-gray-700 mb-2">
+              확인을 위해 <strong className="text-red-700">탈퇴합니다</strong>를 입력해주세요.
+            </p>
+            <input
+              type="text"
+              value={withdrawConfirmText}
+              onChange={(e) => setWithdrawConfirmText(e.target.value)}
+              placeholder="탈퇴합니다"
+              className="w-full border border-red-200 bg-white rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 mb-3"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowWithdraw(false); setWithdrawConfirmText('') }}
+                className="flex-1 border border-gray-300 text-gray-600 rounded-lg py-2 text-sm hover:bg-gray-50"
+              >
+                취소
+              </button>
+              <button
+                onClick={withdrawAccount}
+                disabled={withdrawConfirmText !== '탈퇴합니다' || withdrawing}
+                className="flex-1 bg-red-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {withdrawing ? '처리 중...' : '탈퇴하기'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

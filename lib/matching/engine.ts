@@ -1,6 +1,7 @@
 import type { RecommendationResult, MatchedRule, BonusCategory, PublicEnterprise } from '@/types'
 import type { Database } from '@/types/supabase'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { decryptProfileSensitiveFields } from '@/lib/utils/sensitive-encrypt'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 type LanguageScore = Database['public']['Tables']['user_language_scores']['Row']
@@ -56,10 +57,29 @@ function matchesMajorCondition(condition: string, profile: Profile): boolean {
     (c.includes('사회복지') && detail.includes('사회복지'))
 }
 
-// 자격증 조건 매칭 (이름 기반 단순 매칭)
-function matchesCertCondition(condition: string, certNames: string[]): boolean {
+// 어학 조건에서 시험 종류 추출 (중복 제거용)
+function detectLangExamType(condition: string): string {
   const c = condition.toLowerCase()
-  return certNames.some((n) => c.includes(n.toLowerCase()) || n.toLowerCase().includes(c))
+  if (c.includes('toeic speaking') || c.includes('toeic_speaking')) return 'TOEIC_SPEAKING'
+  if (c.includes('toeic')) return 'TOEIC'
+  if (c.includes('opic')) return 'OPIC'
+  if (c.includes('toefl')) return 'TOEFL'
+  if (c.includes('ielts')) return 'IELTS'
+  if (c.includes('jpt')) return 'JPT'
+  if (c.includes('jlpt')) return 'JLPT'
+  if (c.includes('hsk')) return 'HSK'
+  return condition // 알 수 없으면 조건 전체를 키로 사용
+}
+
+// 자격증 조건 매칭 — 정확한 이름 일치만 허용 (부분 문자열 오매칭 방지)
+function matchesCertCondition(condition: string, certNames: string[]): boolean {
+  const c = condition.trim().toLowerCase()
+  return certNames.some((n) => {
+    const name = n.trim().toLowerCase()
+    // 조건이 자격증 이름과 정확히 일치하거나, 조건이 자격증 이름으로 시작하는 경우만 허용
+    // (예: "전기기사 보유" → "전기기사" 매칭 O, "전기산업기사" 매칭 X)
+    return c === name || c.startsWith(name + ' ') || c.startsWith(name + '(')
+  })
 }
 
 export async function calculateRecommendations(
@@ -118,9 +138,17 @@ export async function calculateRecommendations(
       } else if (cat === '전공') {
         matched = matchesMajorCondition(rule.condition_detail, profile)
       } else if (cat === '보훈') {
-        matched = profile.is_veterans
+        const { is_veterans } = decryptProfileSensitiveFields({
+          is_veterans_enc: profile.is_veterans_enc,
+          is_disabled_enc: profile.is_disabled_enc,
+        })
+        matched = is_veterans
       } else if (cat === '장애') {
-        matched = profile.is_disabled
+        const { is_disabled } = decryptProfileSensitiveFields({
+          is_veterans_enc: profile.is_veterans_enc,
+          is_disabled_enc: profile.is_disabled_enc,
+        })
+        matched = is_disabled
       } else if (cat === '지역인재') {
         matched = profile.is_local_talent
       } else if (cat === '기타') {
@@ -139,11 +167,29 @@ export async function calculateRecommendations(
     }
 
     if (matchedRules.length > 0) {
-      const total = matchedRules.reduce((sum, r) => sum + r.bonus_point_percentage, 0)
+      // ── 중복 제거 ──────────────────────────────────────────
+      // 어학: 같은 시험 종류에서 가장 높은 등급 규칙 하나만 유지
+      const langBest = new Map<string, MatchedRule>()
+      const deduplicated: MatchedRule[] = []
+
+      for (const rule of matchedRules) {
+        if (rule.category === '어학') {
+          const examType = detectLangExamType(rule.condition_detail)
+          const existing = langBest.get(examType)
+          if (!existing || rule.bonus_point_percentage > existing.bonus_point_percentage) {
+            langBest.set(examType, rule)
+          }
+        } else {
+          deduplicated.push(rule)
+        }
+      }
+      deduplicated.push(...langBest.values())
+
+      const total = deduplicated.reduce((sum, r) => sum + r.bonus_point_percentage, 0)
       results.push({
         enterprise: enterprise as unknown as PublicEnterprise,
         total_bonus_point: Math.round(total * 100) / 100,
-        matched_rules: matchedRules,
+        matched_rules: deduplicated,
       })
     }
   }

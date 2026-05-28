@@ -1,8 +1,43 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { calculateGapAnalysis } from '@/lib/matching/gap-analysis'
 import BookmarkButton from './BookmarkButton'
+import ReportButton from '@/components/recommendations/ReportButton'
+
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://gong.vercel.app'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ enterpriseId: string }>
+}): Promise<Metadata> {
+  const { enterpriseId } = await params
+  const supabase = await createClient()
+  const { data: enterprise } = await supabase
+    .from('public_enterprises')
+    .select('name, type, ministry, location')
+    .eq('id', enterpriseId)
+    .single()
+
+  if (!enterprise) return { title: '기업 상세' }
+
+  const title = `${enterprise.name} 가산점 상세`
+  const description = `${enterprise.name}(${enterprise.type}) 가산점 기준 및 항목별 조건을 확인하세요. ${enterprise.ministry ?? ''} 소관 공공기관.`
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `${BASE_URL}/recommendations/${enterpriseId}`,
+      type: 'article',
+    },
+    alternates: { canonical: `${BASE_URL}/recommendations/${enterpriseId}` },
+  }
+}
 
 const CATEGORY_LABEL: Record<string, string> = {
   '자격증': '📋 자격증',
@@ -160,9 +195,23 @@ export default async function EnterpriseDetailPage({
         </div>
       )}
 
-      <p className="text-xs text-gray-400 text-center mt-4 leading-relaxed">
-        본 정보는 참고용이며, 실제 적용 기준은 해당 기업의 채용공고를 반드시 확인하세요.
-      </p>
+      {/* 신고 및 면책 고지 */}
+      <div className="flex flex-col items-center gap-2 mt-4">
+        {user && (
+          <ReportButton
+            enterpriseId={enterpriseId}
+            enterpriseName={enterprise.name}
+            rules={(rules ?? []).map((r) => ({
+              id: r.id,
+              category: r.category,
+              condition_detail: r.condition_detail,
+            }))}
+          />
+        )}
+        <p className="text-xs text-gray-400 text-center leading-relaxed">
+          본 정보는 참고용이며, 실제 적용 기준은 해당 기업의 채용공고를 반드시 확인하세요.
+        </p>
+      </div>
     </div>
   )
 }

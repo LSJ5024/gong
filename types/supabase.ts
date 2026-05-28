@@ -20,8 +20,10 @@ export type Database = {
           school_region: string | null
           gpa: number | null
           double_major: string | null
-          is_veterans: boolean
-          is_disabled: boolean
+          /** AES-256-GCM 암호화된 보훈 여부 (애플리케이션 레이어 복호화 필요) */
+          is_veterans_enc: string
+          /** AES-256-GCM 암호화된 장애인 여부 (애플리케이션 레이어 복호화 필요) */
+          is_disabled_enc: string
           is_local_talent: boolean
           is_non_capital: boolean
           created_at: string
@@ -38,8 +40,8 @@ export type Database = {
           school_region?: string | null
           gpa?: number | null
           double_major?: string | null
-          is_veterans?: boolean
-          is_disabled?: boolean
+          is_veterans_enc?: string
+          is_disabled_enc?: string
           is_local_talent?: boolean
           is_non_capital?: boolean
           created_at?: string
@@ -56,8 +58,8 @@ export type Database = {
           school_region?: string | null
           gpa?: number | null
           double_major?: string | null
-          is_veterans?: boolean
-          is_disabled?: boolean
+          is_veterans_enc?: string
+          is_disabled_enc?: string
           is_local_talent?: boolean
           is_non_capital?: boolean
           updated_at?: string
@@ -235,6 +237,40 @@ export type Database = {
           id?: string
           user_id?: string
           enterprise_id?: string
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          id: string
+          user_id: string | null
+          enterprise_id: string
+          rule_id: string | null
+          /** incorrect_info | outdated | missing_rule | other */
+          report_type: string
+          description: string
+          /** pending | reviewed | resolved */
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          enterprise_id: string
+          rule_id?: string | null
+          report_type: string
+          description: string
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          enterprise_id?: string
+          rule_id?: string | null
+          report_type?: string
+          description?: string
+          status?: string
         }
         Relationships: []
       }

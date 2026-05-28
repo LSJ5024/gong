@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { calcExpiryDate } from '@/lib/utils/language-expiry'
+import { encryptProfileSensitiveFields } from '@/lib/utils/sensitive-encrypt'
 import type {
   ProfileStep1, ProfileStep2, ProfileStep3, ProfileStep4,
   EducationLevel, MajorCategory, ExamType,
@@ -86,6 +87,12 @@ export default function ProfileSetupPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
 
+    // 민감정보 AES-256-GCM 암호화
+    const sensitiveEnc = encryptProfileSensitiveFields({
+      is_veterans: step4.is_veterans,
+      is_disabled: step4.is_disabled,
+    })
+
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .insert({
@@ -98,8 +105,7 @@ export default function ProfileSetupPage() {
         school_region: step1.school_region || null,
         gpa: step1.gpa ? parseFloat(step1.gpa) : null,
         double_major: step1.double_major || null,
-        is_veterans: step4.is_veterans,
-        is_disabled: step4.is_disabled,
+        ...sensitiveEnc,  // is_veterans_enc, is_disabled_enc
         is_local_talent: step4.is_local_talent,
         is_non_capital: step4.is_non_capital,
       })

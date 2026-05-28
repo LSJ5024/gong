@@ -37,28 +37,34 @@ function RecommendationsInner() {
   const [typeFilter, setTypeFilter] = useState(() => searchParams.get('type') ?? '전체')
   const [sortBy, setSortBy] = useState(() => searchParams.get('sort') ?? 'bonus_desc')
   const [locationFilter, setLocationFilter] = useState(() => searchParams.get('loc') ?? '')
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '')
 
   // 필터 변경 시 URL 동기화
-  const syncUrl = useCallback((type: string, sort: string, loc: string) => {
+  const syncUrl = useCallback((type: string, sort: string, loc: string, q: string) => {
     const params = new URLSearchParams()
     if (type !== '전체') params.set('type', type)
     if (sort !== 'bonus_desc') params.set('sort', sort)
     if (loc) params.set('loc', loc)
+    if (q) params.set('q', q)
     const query = params.toString()
     router.replace(`/recommendations${query ? `?${query}` : ''}`, { scroll: false })
   }, [router])
 
   function handleTypeFilter(value: string) {
     setTypeFilter(value)
-    syncUrl(value, sortBy, locationFilter)
+    syncUrl(value, sortBy, locationFilter, searchQuery)
   }
   function handleSort(value: string) {
     setSortBy(value)
-    syncUrl(typeFilter, value, locationFilter)
+    syncUrl(typeFilter, value, locationFilter, searchQuery)
   }
   function handleLocation(value: string) {
     setLocationFilter(value)
-    syncUrl(typeFilter, sortBy, value)
+    syncUrl(typeFilter, sortBy, value, searchQuery)
+  }
+  function handleSearch(value: string) {
+    setSearchQuery(value)
+    syncUrl(typeFilter, sortBy, locationFilter, value)
   }
 
   // 공유 링크 복사
@@ -107,26 +113,60 @@ function RecommendationsInner() {
     if (locationFilter && locationFilter !== '전체') {
       list = list.filter((r) => r.enterprise.location?.startsWith(locationFilter))
     }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase()
+      list = list.filter((r) =>
+        r.enterprise.name.toLowerCase().includes(q) ||
+        (r.enterprise.ministry ?? '').toLowerCase().includes(q)
+      )
+    }
     if (sortBy === 'match_desc') list.sort((a, b) => b.matched_rules.length - a.matched_rules.length)
     return list
-  }, [results, typeFilter, locationFilter, sortBy])
+  }, [results, typeFilter, locationFilter, searchQuery, sortBy])
 
   async function toggleBookmark(e: React.MouseEvent, enterpriseId: string) {
     e.preventDefault()
+    e.stopPropagation()
     if (togglingId) return
     setTogglingId(enterpriseId)
-    if (bookmarks.has(enterpriseId)) {
-      await fetch(`/api/bookmarks?enterpriseId=${enterpriseId}`, { method: 'DELETE' })
-      setBookmarks((prev) => { const s = new Set(prev); s.delete(enterpriseId); return s })
-    } else {
-      await fetch('/api/bookmarks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enterprise_id: enterpriseId }),
+
+    const wasBookmarked = bookmarks.has(enterpriseId)
+    // 낙관적 업데이트
+    setBookmarks((prev) => {
+      const s = new Set(prev)
+      wasBookmarked ? s.delete(enterpriseId) : s.add(enterpriseId)
+      return s
+    })
+
+    try {
+      const res = wasBookmarked
+        ? await fetch(`/api/bookmarks?enterpriseId=${enterpriseId}`, { method: 'DELETE' })
+        : await fetch('/api/bookmarks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enterprise_id: enterpriseId }),
+          })
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        console.error('[Bookmark] API 오류:', res.status, body)
+        // 실패 시 낙관적 업데이트 되돌리기
+        setBookmarks((prev) => {
+          const s = new Set(prev)
+          wasBookmarked ? s.add(enterpriseId) : s.delete(enterpriseId)
+          return s
+        })
+      }
+    } catch {
+      // 네트워크 에러 시 되돌리기
+      setBookmarks((prev) => {
+        const s = new Set(prev)
+        wasBookmarked ? s.add(enterpriseId) : s.delete(enterpriseId)
+        return s
       })
-      setBookmarks((prev) => new Set([...prev, enterpriseId]))
+    } finally {
+      setTogglingId(null)
     }
-    setTogglingId(null)
   }
 
   if (loading) {
@@ -184,6 +224,28 @@ function RecommendationsInner() {
         </div>
       </div>
 
+      {/* 검색 바 */}
+      <div className="relative mb-3">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">🔍</span>
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => handleSearch(e.target.value)}
+          placeholder="기업명 또는 주무부처 검색..."
+          className="w-full bg-white border border-gray-200 rounded-xl pl-8 pr-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          aria-label="기업 검색"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => handleSearch('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
+            aria-label="검색어 지우기"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
       {/* 필터·정렬 바 */}
       <div className="bg-white rounded-xl shadow-sm p-3 mb-5 flex flex-wrap gap-2 items-center">
         {/* 기업 유형 필터 */}
@@ -221,7 +283,7 @@ function RecommendationsInner() {
           {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         <span className="text-xs text-gray-400 ml-auto" aria-live="polite" aria-atomic="true">
-          {filtered.length}개
+          {filtered.length}개 {searchQuery && <span className="text-blue-500">"{searchQuery}" 검색 중</span>}
         </span>
       </div>
 
