@@ -1,7 +1,8 @@
 import type { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://gong.vercel.app'
+const _rawSitemapUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/^﻿/, '').trim()
+const BASE_URL = _rawSitemapUrl || 'https://gong-peach.vercel.app'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 정적 페이지

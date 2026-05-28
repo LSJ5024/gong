@@ -4,7 +4,9 @@ import './globals.css'
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://gong.vercel.app'
+// BOM(U+FEFF) 및 앞뒤 공백 제거 후 유효한 URL만 사용
+const _rawUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/^﻿/, '').trim()
+const BASE_URL = _rawUrl || 'https://gong-peach.vercel.app'
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
