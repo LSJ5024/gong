@@ -40,7 +40,9 @@ export async function updateSession(request: NextRequest) {
   }
 
   // 어드민 경로 → 비로그인 시 /login 리디렉트 (이메일 체크는 레이아웃에서)
-  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+  // /api/admin/setup 은 토큰 기반 인증이므로 세션 체크 제외
+  const isAdminSetup = pathname === '/api/admin/setup'
+  if (!isAdminSetup && (pathname.startsWith('/admin') || pathname.startsWith('/api/admin'))) {
     if (!user) {
       const url = request.nextUrl.clone()
       url.pathname = '/login'
